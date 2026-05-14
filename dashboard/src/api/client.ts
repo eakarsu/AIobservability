@@ -72,3 +72,41 @@ export const deleteAlertRule = (ruleId: string) =>
   api.delete(`/alerts/rules/${ruleId}`);
 export const fetchAlertHistory = (params?: { status?: string; limit?: number }) =>
   api.get<AlertFired[]>('/alerts/history', { params }).then(r => r.data);
+
+// AI Insights
+export interface AIInsightResponse {
+  insight: string;
+  model: string;
+  tokens_used?: number | null;
+  context?: Record<string, unknown> | null;
+}
+
+export const aiAnalyzeEvent = (body: { event_id: string; expected_behavior?: string }) =>
+  api.post<AIInsightResponse>('/ai/analyze-event', body).then(r => r.data);
+
+export const aiAnalyzeIncident = (body: { alert_id?: string; window_minutes?: number; include_sample_events?: number }) =>
+  api.post<AIInsightResponse>('/ai/analyze-incident', body).then(r => r.data);
+
+export const aiDriftNarrative = (body: { model_name?: string; lookback_hours?: number }) =>
+  api.post<AIInsightResponse>('/ai/drift-narrative', body).then(r => r.data);
+
+export const aiCompareModels = (body: { model_a: string; model_b: string; lookback_hours?: number }) =>
+  api.post<AIInsightResponse>('/ai/compare-models', body).then(r => r.data);
+
+export const aiCostOptimize = (body: { lookback_hours?: number }) =>
+  api.post<AIInsightResponse>('/ai/cost-optimize', body).then(r => r.data);
+
+export const aiTraceAnalyze = (body: { trace_id: string }) =>
+  api.post<AIInsightResponse>('/ai/trace-analyze', body).then(r => r.data);
+
+export const aiPromptRegression = (body: { model_name: string; baseline_hours?: number; recent_hours?: number }) =>
+  api.post<AIInsightResponse>('/ai/prompt-regression', body).then(r => r.data);
+
+export const aiHallucinationCluster = (body: { lookback_hours?: number; min_score?: number; sample_size?: number }) =>
+  api.post<AIInsightResponse>('/ai/hallucination-cluster', body).then(r => r.data);
+
+export const aiAlertRuleSuggest = (body: { metric_focus?: string }) =>
+  api.post<AIInsightResponse>('/ai/alert-rule-suggest', body).then(r => r.data);
+
+export const aiExplainQuery = (body: { question: string }) =>
+  api.post<AIInsightResponse>('/ai/explain-query', body).then(r => r.data);

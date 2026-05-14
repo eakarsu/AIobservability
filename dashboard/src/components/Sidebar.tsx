@@ -7,6 +7,7 @@ import {
   Bell,
   Settings,
   Brain,
+  Sparkles,
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/drift', icon: TrendingDown, label: 'Drift Analysis' },
   { to: '/hallucinations', icon: AlertTriangle, label: 'Hallucinations' },
   { to: '/alerts', icon: Bell, label: 'Alerts' },
+  { to: '/ai-insights', icon: Sparkles, label: 'AI Insights' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
