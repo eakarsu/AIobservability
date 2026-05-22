@@ -110,3 +110,6 @@ export const aiAlertRuleSuggest = (body: { metric_focus?: string }) =>
 
 export const aiExplainQuery = (body: { question: string }) =>
   api.post<AIInsightResponse>('/ai/explain-query', body).then(r => r.data);
+
+export const scanPromptInjection = (body: { prompt: string; tool_access: string[]; retrieved_context: string }) =>
+  api.post('/prompt-injection/scan', body).then(r => r.data);

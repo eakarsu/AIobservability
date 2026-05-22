@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1 import ingest, query, alerts, projects, ai
+from app.api.v1 import prompt_injection_exposure
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -8,6 +9,7 @@ api_router.include_router(query.router, tags=["Metrics & Events"])
 api_router.include_router(alerts.router, tags=["Alerts"])
 api_router.include_router(projects.router, tags=["Projects"])
 api_router.include_router(ai.router, tags=["AI Insights"])
+api_router.include_router(prompt_injection_exposure.router, tags=["Prompt Injection Exposure"])
 
 # === Custom Feature Routers (batch_06) ===
 from app.api.v1 import custom_feat_01_llm_cost_latency_dashboards, custom_feat_02_prompt_regression_detector, custom_feat_03_trace_replay, custom_feat_04_eval_harness_integration, custom_feat_05_opentelemetry_compatibility

@@ -8,6 +8,7 @@ import {
   Settings,
   Brain,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/hallucinations', icon: AlertTriangle, label: 'Hallucinations' },
   { to: '/alerts', icon: Bell, label: 'Alerts' },
   { to: '/ai-insights', icon: Sparkles, label: 'AI Insights' },
+  { to: '/prompt-injection', icon: ShieldAlert, label: 'Prompt Injection' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

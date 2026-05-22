@@ -24,9 +24,16 @@ import GapNoWebhooksForAlertDeliverySlackPagerdutyPage from './pages/GapNoWebhoo
 import GapNoRetentionArchivalPoliciesForTelemetryPage from './pages/GapNoRetentionArchivalPoliciesForTelemetryPage';
 import GapLimitedIntegrationsOnlyOwnSdkNoOpentelemetryPage from './pages/GapLimitedIntegrationsOnlyOwnSdkNoOpentelemetryPage';
 import GapNoAuditLoggingPage from './pages/GapNoAuditLoggingPage';
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+import PromptInjectionExposure from './pages/PromptInjectionExposure';
+
 export default function App() {
   return (
     <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/overview" replace />} />
         <Route path="overview" element={<Overview />} />
@@ -36,6 +43,7 @@ export default function App() {
         <Route path="alerts" element={<Alerts />} />
         <Route path="ai-insights" element={<AIInsights />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="prompt-injection" element={<PromptInjectionExposure />} />
       </Route>
     
           {/* // === Batch 06 Gaps & Frontend Mounts === */}
