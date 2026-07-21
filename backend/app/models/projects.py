@@ -1,7 +1,7 @@
 import uuid
 import secrets
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -14,6 +14,8 @@ class Project(Base):
     description = Column(String(1024))
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    tenant_id = Column(String(128), nullable=True, index=True)
+    retention_days = Column(Integer, nullable=False, default=30)
 
     api_keys = relationship("ApiKey", back_populates="project")
 
@@ -26,6 +28,7 @@ class ApiKey(Base):
     key_prefix = Column(String(12), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    role = Column(String(32), nullable=False, default="viewer")
 
     project = relationship("Project", back_populates="api_keys")
 

@@ -1,43 +1,28 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.config import settings
 from app.api.router import api_router
-from app.core.database import engine, Base
-from app.scheduler.background import start_scheduler, stop_scheduler
-
+from app.api.auth import router as auth_router
+from app.core.database import engine
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Create tables on startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    # Start background scheduler (drift detection, hallucination scoring, alerts)
-    start_scheduler()
+async def lifespan(_app: FastAPI):
+    async with engine.connect() as connection:
+        ready = (await connection.execute(text("SELECT to_regclass('observability_events')"))).scalar_one()
+        if not ready: raise RuntimeError("Database migration missing; run python scripts/migrate.py")
     yield
-    # Shutdown
-    stop_scheduler()
     await engine.dispose()
 
-
-app = FastAPI(
-    title="AI Observability Platform",
-    description="Monitor, troubleshoot, and evaluate AI application performance in production",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+app = FastAPI(title="AI Observability Platform", version="2.0.0", lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=settings.parsed_cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(api_router)
-
+app.include_router(auth_router, prefix="/api")
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "ai-observability"}
+    try:
+        async with engine.connect() as connection: await connection.execute(text("SELECT 1"))
+        return {"status": "healthy", "service": "ai-observability"}
+    except Exception as exc: raise HTTPException(503, "unready") from exc
