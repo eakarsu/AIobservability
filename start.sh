@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-$(pyenv which python3 2>/dev/null || command -v python3)}"
 
 load_env_file() {
   local key value
@@ -20,7 +21,18 @@ load_env_file() {
 
 if [[ ! -f "$ROOT/.env" ]]; then echo "Missing .env; copy .env.example and provide secrets." >&2; exit 1; fi
 load_env_file
-case "${1:-backend}" in
+case "${1:-all}" in
+  all)
+    "$ROOT/start.sh" backend & backend_pid=$!
+    "$ROOT/start.sh" dashboard & dashboard_pid=$!
+    cleanup() {
+      trap - EXIT INT TERM
+      kill "$backend_pid" "$dashboard_pid" 2>/dev/null || true
+      wait "$backend_pid" "$dashboard_pid" 2>/dev/null || true
+    }
+    trap cleanup EXIT INT TERM
+    wait "$backend_pid" "$dashboard_pid"
+    ;;
   backend)
     assigned_port="${BACKEND_PORT:-${PORT:?PORT or BACKEND_PORT is required}}"
     sync_url="${SYNC_DATABASE_URL:-${DATABASE_URL:?DATABASE_URL is required}}"
@@ -38,11 +50,11 @@ case "${1:-backend}" in
     fi
     export CORS_ORIGINS="$cors_origins"
     cd "$ROOT/backend"
-    exec python3 -m uvicorn app.main:app --host "${BACKEND_HOST:-${HOST:-127.0.0.1}}" --port "$assigned_port"
+    exec "$PYTHON_BIN" -m uvicorn app.main:app --host "${BACKEND_HOST:-${HOST:-127.0.0.1}}" --port "$assigned_port"
     ;;
   dashboard)
     cd "$ROOT/dashboard"
     exec npm run dev -- --host "${FRONTEND_HOST:-127.0.0.1}" --port "${FRONTEND_PORT:?FRONTEND_PORT is required}"
     ;;
-  *) echo "Usage: $0 [backend|dashboard]" >&2; exit 64 ;;
+  *) echo "Usage: $0 [all|backend|dashboard]" >&2; exit 64 ;;
 esac

@@ -1,8 +1,10 @@
 from __future__ import annotations
 import json
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -16,6 +18,31 @@ router = APIRouter(prefix="/authoritative", tags=["Authoritative observability"]
 def permitted(identity: Identity, action: str, project_id: str | None = None) -> None:
     try: authorize(identity.as_policy(), identity.tenant_id, action, project_id)
     except PolicyError as exc: raise HTTPException(403, str(exc)) from exc
+
+@router.post("/ai/explain")
+async def explain_observability(body: dict = Body(...), identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+    question = str(body.get("question") or "").strip()
+    if not question: raise HTTPException(422, "question_required")
+    permitted(identity, "read", identity.project_id)
+    api_key = str(os.getenv("OPENROUTER_API_KEY") or "").strip()
+    model = str(os.getenv("OPENROUTER_MODEL") or "").strip()
+    base_url = str(os.getenv("OPENROUTER_BASE_URL") or "").strip().rstrip("/")
+    if not api_key: raise HTTPException(503, "OPENROUTER_API_KEY_not_configured")
+    if not model: raise HTTPException(503, "OPENROUTER_MODEL_not_configured")
+    if base_url != "https://openrouter.ai/api/v1": raise HTTPException(503, "OPENROUTER_BASE_URL_invalid")
+    event_count = (await db.execute(text("SELECT COUNT(*) FROM observability_events WHERE tenant_id=:tenant AND project_id=:project AND expires_at>NOW()"), {"tenant": identity.tenant_id, "project": identity.project_id})).scalar_one()
+    prompt = f"Answer this observability question using only the supplied facts. Question: {question}\nFacts: active retained event count={event_count}. If more evidence is needed, say exactly which telemetry should be collected."
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "X-Title": "AI Observability Platform"}, json={"model": model, "messages": [{"role": "system", "content": "You are a grounded LLM observability analyst. Never invent metrics."}, {"role": "user", "content": prompt}], "max_tokens": 1200})
+    try: data = response.json()
+    except ValueError as exc: raise HTTPException(502, "openrouter_invalid_json") from exc
+    if not response.is_success or data.get("error"): raise HTTPException(502, "openrouter_request_failed")
+    content = data.get("choices", [{}])[0].get("message", {}).get("content")
+    if not isinstance(content, str) or not content.strip(): raise HTTPException(502, "openrouter_empty_response")
+    result_id = str(uuid.uuid4())
+    await db.execute(text("INSERT INTO observability_ai_results(id,tenant_id,project_id,user_id,endpoint,input_data,result,model) VALUES(:id,:tenant,:project,:user,'/api/v1/authoritative/ai/explain',CAST(:input AS jsonb),CAST(:result AS jsonb),:model)"), {"id": result_id, "tenant": identity.tenant_id, "project": identity.project_id, "user": identity.key_id, "input": json.dumps({"question": question, "event_count": event_count}), "result": json.dumps({"insight": content}), "model": model})
+    await db.commit()
+    return {"result_id": result_id, "insight": content, "model": data.get("model") or model}
 
 @router.post("/events", status_code=202)
 async def ingest_event(body: dict = Body(...), identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
