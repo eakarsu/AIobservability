@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,15 @@ from app.core.database import get_db
 from app.core.security import Identity, create_session_token, get_identity, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+@router.get("/demo-credentials")
+async def demo_credentials():
+    if os.getenv("NODE_ENV", "development") == "production":
+        raise HTTPException(404, "not_found")
+    email = os.getenv("PROVISION_ADMIN_EMAIL") or os.getenv("ADMIN_EMAIL") or ""
+    password = os.getenv("PROVISION_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
+    if not email or not password: raise HTTPException(503, "demo_credentials_unavailable")
+    return {"email": email, "password": password}
 
 @router.post("/login")
 async def login(body: dict = Body(...), db: AsyncSession = Depends(get_db)):
