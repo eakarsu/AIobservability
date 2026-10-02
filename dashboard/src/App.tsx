@@ -50,7 +50,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (!response.ok) return setError('Demo credentials are unavailable.');
     const credentials = await response.json();
     setEmail(credentials.email);
-    setPassword(credentials.password);
+    setPassword(credentials.password)
+      window.setTimeout(() => { const __f = document.querySelector('form'); if (__f) __f.requestSubmit(); }, 60);;
   }
 
   async function signIn(event: FormEvent) {
