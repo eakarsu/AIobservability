@@ -51,7 +51,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     const credentials = await response.json();
     setEmail(credentials.email);
     setPassword(credentials.password)
-      window.setTimeout(() => { const __f = document.querySelector('form'); if (__f) __f.requestSubmit(); }, 60);;
+
   }
 
   async function signIn(event: FormEvent) {
