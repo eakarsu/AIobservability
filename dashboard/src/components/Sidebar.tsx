@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
+  { to: '/ai-workspace', icon: Sparkles, label: 'AI workspace' },
   { to: '/overview', icon: LayoutDashboard, label: 'Overview' },
   { to: '/performance', icon: Activity, label: 'Model Performance' },
   { to: '/drift', icon: TrendingDown, label: 'Drift Analysis' },

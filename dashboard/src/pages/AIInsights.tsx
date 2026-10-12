@@ -1,3 +1,6 @@
+import ReadableAIResult from '../components/ReadableAIResult';
+
+import FullAIExamples, { useFullAIExamples } from "../components/FullAIExamples";
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -103,6 +106,8 @@ function toFloat(v: string, fallback: number): number {
 }
 
 export default function AIInsights() {
+  const fullAIExamples = useFullAIExamples();
+
   const [activeTool, setActiveTool] = useState<ToolKey>('analyze-event');
   const [inputs, setInputs] = useState<Inputs>(DEFAULT_INPUTS);
 
@@ -202,7 +207,7 @@ export default function AIInsights() {
         </div>
 
         <div className="lg:col-span-3 space-y-4">
-          <form onSubmit={submit} className="bg-white rounded-lg shadow p-4 space-y-3">
+          <form onSubmit={submit} className="bg-white rounded-lg shadow p-4 space-y-3" data-full-ai-workspace="AIInsights"><FullAIExamples controller={fullAIExamples} />
             <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
               {TOOLS.find(t => t.key === activeTool)?.label}
             </h2>
@@ -210,10 +215,10 @@ export default function AIInsights() {
             {activeTool === 'analyze-event' && (
               <>
                 <Field label="Event ID" required>
-                  <input className={inputClass} value={inputs.event_id} onChange={update('event_id')} placeholder="evt_..." required />
+                  <input className={inputClass} value={inputs.event_id} onChange={update('event_id')} placeholder="evt_..." required data-full-ai-field={fullAIExamples.bind({ current: inputs.event_id, change: update('event_id'), label: "inputs.event_id", manual: false, json: false }, "p1-7700", undefined)} />
                 </Field>
                 <Field label="Expected behavior (optional)">
-                  <textarea className={inputClass} rows={2} value={inputs.expected_behavior} onChange={update('expected_behavior')} />
+                  <textarea className={inputClass} rows={2} value={inputs.expected_behavior} onChange={update('expected_behavior')} data-full-ai-field={fullAIExamples.bind({ current: inputs.expected_behavior, change: update('expected_behavior'), label: "inputs.expected_behavior", manual: false, json: false }, "p1-7922", undefined)} />
                 </Field>
               </>
             )}
@@ -221,14 +226,14 @@ export default function AIInsights() {
             {activeTool === 'analyze-incident' && (
               <>
                 <Field label="Alert ID (optional)">
-                  <input className={inputClass} value={inputs.alert_id} onChange={update('alert_id')} />
+                  <input className={inputClass} value={inputs.alert_id} onChange={update('alert_id')} data-full-ai-field={fullAIExamples.bind({ current: inputs.alert_id, change: update('alert_id'), label: "inputs.alert_id", manual: false, json: false }, "p1-8237", undefined)} />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Window (minutes)">
-                    <input type="number" className={inputClass} value={inputs.window_minutes} onChange={update('window_minutes')} />
+                    <input type="number" className={inputClass} value={inputs.window_minutes} onChange={update('window_minutes')} data-full-ai-field={fullAIExamples.bind({ current: inputs.window_minutes, change: update('window_minutes'), label: "inputs.window_minutes", manual: false, json: false }, "p1-8477", undefined)} />
                   </Field>
                   <Field label="Sample events">
-                    <input type="number" className={inputClass} value={inputs.include_sample_events} onChange={update('include_sample_events')} />
+                    <input type="number" className={inputClass} value={inputs.include_sample_events} onChange={update('include_sample_events')} data-full-ai-field={fullAIExamples.bind({ current: inputs.include_sample_events, change: update('include_sample_events'), label: "inputs.include_sample_events", manual: false, json: false }, "p1-8685", undefined)} />
                   </Field>
                 </div>
               </>
@@ -237,10 +242,10 @@ export default function AIInsights() {
             {activeTool === 'drift-narrative' && (
               <>
                 <Field label="Model name (optional)">
-                  <input className={inputClass} value={inputs.drift_model_name} onChange={update('drift_model_name')} />
+                  <input className={inputClass} value={inputs.drift_model_name} onChange={update('drift_model_name')} data-full-ai-field={fullAIExamples.bind({ current: inputs.drift_model_name, change: update('drift_model_name'), label: "inputs.drift_model_name", manual: false, json: false }, "p1-9036", undefined)} />
                 </Field>
                 <Field label="Lookback (hours)">
-                  <input type="number" className={inputClass} value={inputs.drift_lookback_hours} onChange={update('drift_lookback_hours')} />
+                  <input type="number" className={inputClass} value={inputs.drift_lookback_hours} onChange={update('drift_lookback_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.drift_lookback_hours, change: update('drift_lookback_hours'), label: "inputs.drift_lookback_hours", manual: false, json: false }, "p1-9231", undefined)} />
                 </Field>
               </>
             )}
@@ -249,41 +254,41 @@ export default function AIInsights() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Model A" required>
-                    <input className={inputClass} value={inputs.cmp_model_a} onChange={update('cmp_model_a')} required />
+                    <input className={inputClass} value={inputs.cmp_model_a} onChange={update('cmp_model_a')} required data-full-ai-field={fullAIExamples.bind({ current: inputs.cmp_model_a, change: update('cmp_model_a'), label: "inputs.cmp_model_a", manual: false, json: false }, "p1-9610", undefined)} />
                   </Field>
                   <Field label="Model B" required>
-                    <input className={inputClass} value={inputs.cmp_model_b} onChange={update('cmp_model_b')} required />
+                    <input className={inputClass} value={inputs.cmp_model_b} onChange={update('cmp_model_b')} required data-full-ai-field={fullAIExamples.bind({ current: inputs.cmp_model_b, change: update('cmp_model_b'), label: "inputs.cmp_model_b", manual: false, json: false }, "p1-9810", undefined)} />
                   </Field>
                 </div>
                 <Field label="Lookback (hours)">
-                  <input type="number" className={inputClass} value={inputs.cmp_lookback_hours} onChange={update('cmp_lookback_hours')} />
+                  <input type="number" className={inputClass} value={inputs.cmp_lookback_hours} onChange={update('cmp_lookback_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.cmp_lookback_hours, change: update('cmp_lookback_hours'), label: "inputs.cmp_lookback_hours", manual: false, json: false }, "p1-10029", undefined)} />
                 </Field>
               </>
             )}
 
             {activeTool === 'cost-optimize' && (
               <Field label="Lookback (hours)">
-                <input type="number" className={inputClass} value={inputs.cost_lookback_hours} onChange={update('cost_lookback_hours')} />
+                <input type="number" className={inputClass} value={inputs.cost_lookback_hours} onChange={update('cost_lookback_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.cost_lookback_hours, change: update('cost_lookback_hours'), label: "inputs.cost_lookback_hours", manual: false, json: false }, "p1-10321", undefined)} />
               </Field>
             )}
 
             {activeTool === 'trace-analyze' && (
               <Field label="Trace ID" required>
-                <input className={inputClass} value={inputs.trace_id} onChange={update('trace_id')} required />
+                <input className={inputClass} value={inputs.trace_id} onChange={update('trace_id')} required data-full-ai-field={fullAIExamples.bind({ current: inputs.trace_id, change: update('trace_id'), label: "inputs.trace_id", manual: false, json: false }, "p1-10596", undefined)} />
               </Field>
             )}
 
             {activeTool === 'prompt-regression' && (
               <>
                 <Field label="Model name" required>
-                  <input className={inputClass} value={inputs.pr_model_name} onChange={update('pr_model_name')} required />
+                  <input className={inputClass} value={inputs.pr_model_name} onChange={update('pr_model_name')} required data-full-ai-field={fullAIExamples.bind({ current: inputs.pr_model_name, change: update('pr_model_name'), label: "inputs.pr_model_name", manual: false, json: false }, "p1-10871", undefined)} />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Baseline (hours)">
-                    <input type="number" className={inputClass} value={inputs.pr_baseline_hours} onChange={update('pr_baseline_hours')} />
+                    <input type="number" className={inputClass} value={inputs.pr_baseline_hours} onChange={update('pr_baseline_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.pr_baseline_hours, change: update('pr_baseline_hours'), label: "inputs.pr_baseline_hours", manual: false, json: false }, "p1-11130", undefined)} />
                   </Field>
                   <Field label="Recent (hours)">
-                    <input type="number" className={inputClass} value={inputs.pr_recent_hours} onChange={update('pr_recent_hours')} />
+                    <input type="number" className={inputClass} value={inputs.pr_recent_hours} onChange={update('pr_recent_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.pr_recent_hours, change: update('pr_recent_hours'), label: "inputs.pr_recent_hours", manual: false, json: false }, "p1-11345", undefined)} />
                   </Field>
                 </div>
               </>
@@ -292,20 +297,20 @@ export default function AIInsights() {
             {activeTool === 'hallucination-cluster' && (
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Lookback (hours)">
-                  <input type="number" className={inputClass} value={inputs.hc_lookback_hours} onChange={update('hc_lookback_hours')} />
+                  <input type="number" className={inputClass} value={inputs.hc_lookback_hours} onChange={update('hc_lookback_hours')} data-full-ai-field={fullAIExamples.bind({ current: inputs.hc_lookback_hours, change: update('hc_lookback_hours'), label: "inputs.hc_lookback_hours", manual: false, json: false }, "p1-11723", undefined)} />
                 </Field>
                 <Field label="Min score">
-                  <input type="number" step="0.05" className={inputClass} value={inputs.hc_min_score} onChange={update('hc_min_score')} />
+                  <input type="number" step="0.05" className={inputClass} value={inputs.hc_min_score} onChange={update('hc_min_score')} data-full-ai-field={fullAIExamples.bind({ current: inputs.hc_min_score, change: update('hc_min_score'), label: "inputs.hc_min_score", manual: false, json: false }, "p1-11927", undefined)} />
                 </Field>
                 <Field label="Sample size">
-                  <input type="number" className={inputClass} value={inputs.hc_sample_size} onChange={update('hc_sample_size')} />
+                  <input type="number" className={inputClass} value={inputs.hc_sample_size} onChange={update('hc_sample_size')} data-full-ai-field={fullAIExamples.bind({ current: inputs.hc_sample_size, change: update('hc_sample_size'), label: "inputs.hc_sample_size", manual: false, json: false }, "p1-12135", undefined)} />
                 </Field>
               </div>
             )}
 
             {activeTool === 'alert-rule-suggest' && (
               <Field label="Metric focus (optional)">
-                <select className={inputClass} value={inputs.ar_metric_focus} onChange={update('ar_metric_focus')}>
+                <select className={inputClass} value={inputs.ar_metric_focus} onChange={update('ar_metric_focus')} data-full-ai-field={fullAIExamples.bind({ current: inputs.ar_metric_focus, change: update('ar_metric_focus'), label: "inputs.ar_metric_focus", manual: false, json: false }, "p1-12434", undefined)}>
                   <option value="">All metrics</option>
                   <option value="latency">Latency</option>
                   <option value="error_rate">Error rate</option>
@@ -318,7 +323,7 @@ export default function AIInsights() {
 
             {activeTool === 'explain-query' && (
               <Field label="Question" required>
-                <textarea className={inputClass} rows={3} value={inputs.question} onChange={update('question')} placeholder="e.g. Why did p95 latency spike yesterday afternoon?" required />
+                <textarea className={inputClass} rows={3} value={inputs.question} onChange={update('question')} placeholder="e.g. Why did p95 latency spike yesterday afternoon?" required data-full-ai-field={fullAIExamples.bind({ current: inputs.question, change: update('question'), label: "inputs.question", manual: false, json: false }, "p1-13075", undefined)} />
               </Field>
             )}
 
@@ -363,13 +368,11 @@ export default function AIInsights() {
                 <span>Model: <code className="text-gray-700">{mutation.data.model}</code></span>
                 {mutation.data.tokens_used != null && <span>{mutation.data.tokens_used} tokens</span>}
               </div>
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm text-gray-800">
-                {mutation.data.insight}
-              </div>
+              <ReadableAIResult value={mutation.data.insight} />
               {mutation.data.context && Object.keys(mutation.data.context).length > 0 && (
                 <details className="text-xs text-gray-500">
                   <summary className="cursor-pointer hover:text-gray-700">Context (debug)</summary>
-                  <pre className="mt-2 bg-gray-50 rounded p-2 overflow-auto">{JSON.stringify(mutation.data.context, null, 2)}</pre>
+                  <ReadableAIResult value={mutation.data.context} />
                 </details>
               )}
             </div>

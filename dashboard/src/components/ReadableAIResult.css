@@ -1,0 +1,12 @@
+.readable-ai-result { line-height: 1.6; overflow-wrap: anywhere; color: inherit; }
+.readable-ai-result .answer-values { margin: 0; }
+.readable-ai-result .answer-values > div { padding: 10px 0; border-bottom: 1px solid #64748b55; }
+.readable-ai-result dt { font-weight: 700; margin-bottom: 4px; }
+.readable-ai-result dd { margin: 0; }
+.readable-ai-result p { margin: 4px 0 10px; }
+.readable-ai-result ol, .readable-ai-result ul { padding-left: 22px; list-style: revert; }
+.readable-ai-result li { margin: 5px 0; }
+.readable-ai-result .answer-table { overflow-x: auto; }
+.readable-ai-result table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.readable-ai-result th, .readable-ai-result td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid #64748b55; }
+.readable-ai-result th { font-weight: 700; background: #64748b22; }

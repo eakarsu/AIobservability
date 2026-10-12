@@ -2,6 +2,7 @@
 // Gap (AI): No '/drift
 // No /drift-detect (model/data drift monitoring)
 import React, { useState } from 'react';
+import ReadableAIResult from '../components/ReadableAIResult';
 
 export default function GapNoDriftPage() {
   const [input, setInput] = useState<string>('');
@@ -93,7 +94,7 @@ export default function GapNoDriftPage() {
       {result && (
         <div style={{ background: '#0b1220', padding: 16, borderRadius: 8 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Result</h3>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12, color: '#d1d5db' }}>{JSON.stringify(result, null, 2)}</pre>
+          <ReadableAIResult value={result} />
         </div>
       )}
     </div>

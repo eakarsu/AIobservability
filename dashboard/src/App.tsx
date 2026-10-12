@@ -1,3 +1,4 @@
+import NativeAIPage from './native-ai/NativeAIPage';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import Layout from './components/Layout';
@@ -41,17 +42,22 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (!token) return setChecking(false);
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => setAuthenticated(response.ok))
+      .catch(() => setAuthenticated(false))
       .finally(() => setChecking(false));
   }, []);
 
   async function fillDemoCredentials() {
     setError('');
-    const response = await fetch('/api/auth/demo-credentials');
-    if (!response.ok) return setError('Demo credentials are unavailable.');
-    const credentials = await response.json();
-    setEmail(credentials.email);
-    setPassword(credentials.password)
-
+    try {
+      const response = await fetch('/api/auth/demo-credentials');
+      if (!response.ok) throw new Error('unavailable');
+      const credentials = await response.json();
+      if (typeof credentials.email !== 'string' || !credentials.email || typeof credentials.password !== 'string' || !credentials.password) throw new Error('unavailable');
+      setEmail(credentials.email);
+      setPassword(credentials.password);
+    } catch {
+      setError('Demo credentials are unavailable. Configure the existing demo account to use this button.');
+    }
   }
 
   async function signIn(event: FormEvent) {
@@ -69,7 +75,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (checking) return <main className="min-h-screen bg-gray-950 text-white grid place-items-center">Checking session…</main>;
-  if (!authenticated) return <main className="min-h-screen bg-gray-950 text-white grid place-items-center p-6"><section className="w-full max-w-md rounded-2xl bg-gray-900 p-8 shadow-2xl"><h1 className="text-3xl font-bold">Observability Sign In</h1><p className="mt-2 text-gray-400">Access the authenticated model operations dashboard.</p><form className="mt-6 grid gap-4" onSubmit={signIn}><label>Email<input className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 p-3" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 p-3" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error && <p role="alert" className="text-red-300">{error}</p>}<button type="button" className="rounded-lg border border-cyan-500 p-3" onClick={fillDemoCredentials}>Auto Fill Demo Credentials</button><button type="submit" className="rounded-lg bg-cyan-600 p-3 font-semibold">Sign In</button></form></section></main>;
+  if (!authenticated) return <main className="min-h-screen bg-gray-950 text-white grid place-items-center p-6"><section className="w-full max-w-md rounded-2xl bg-gray-900 p-8 shadow-2xl"><h1 className="text-3xl font-bold">Observability Sign In</h1><p className="mt-2 text-gray-400">Access the authenticated model operations dashboard.</p><form className="mt-6 grid gap-4" onSubmit={signIn}><label>Email<input className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 p-3" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 p-3" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error && <p role="alert" className="text-red-300">{error}</p>}<button type="button" className="rounded-lg border border-cyan-500 p-3" onClick={() => { void fillDemoCredentials(); }}>Fill demo credentials</button><button type="submit" className="rounded-lg bg-cyan-600 p-3 font-semibold">Sign In</button></form></section></main>;
   return children;
 }
 
@@ -81,6 +87,7 @@ export default function App() {
         <Route path="/codex/operations" element={<CodexOperationsFeature />} />
 
       <Route path="/" element={<Layout />}>
+        <Route path="ai-workspace" element={<NativeAIPage />} />
         <Route index element={<Navigate to="/overview" replace />} />
         <Route path="overview" element={<Overview />} />
         <Route path="performance" element={<ModelPerformance />} />

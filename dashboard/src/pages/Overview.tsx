@@ -22,7 +22,7 @@ export default function Overview() {
 
   const { data: events } = useQuery({
     queryKey: ['recentEvents'],
-    queryFn: () => fetchEvents({ limit: 10 }),
+    queryFn: () => fetchEvents({ limit: 20 }),
   });
 
   if (isLoading) {

@@ -13,8 +13,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 async def demo_credentials():
     if os.getenv("NODE_ENV", "development") == "production":
         raise HTTPException(404, "not_found")
-    email = os.getenv("PROVISION_ADMIN_EMAIL") or os.getenv("ADMIN_EMAIL") or ""
-    password = os.getenv("PROVISION_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
+    email = os.getenv("DEMO_ADMIN_EMAIL") or os.getenv("PROVISION_ADMIN_EMAIL") or os.getenv("ADMIN_EMAIL") or ""
+    password = os.getenv("DEMO_ADMIN_PASSWORD") or os.getenv("PROVISION_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
     if not email or not password: raise HTTPException(503, "demo_credentials_unavailable")
     return {"email": email, "password": password}
 

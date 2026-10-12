@@ -21,13 +21,27 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('observability_access_token');
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  return config;
+});
+
+function records<T>(payload: unknown, name: string): T[] {
+  const rows = Array.isArray(payload) ? payload
+    : payload && typeof payload === 'object' && 'data' in payload ? (payload as { data: unknown }).data
+    : undefined;
+  if (!Array.isArray(rows)) throw new TypeError(`${name} response must contain an array of records`);
+  return rows as T[];
+}
+
 // Set API key for all requests
 export function setApiKey(key: string) {
   api.defaults.headers.common['X-API-Key'] = key;
 }
 
 // Projects
-export const fetchProjects = () => api.get<Project[]>('/projects').then(r => r.data);
+export const fetchProjects = () => api.get('/authoritative/projects').then(r => records<Project>(r.data, 'Projects'));
 export const createProject = (data: { name: string; description?: string }) =>
   api.post<Project>('/projects', data).then(r => r.data);
 export const createApiKey = (projectId: string) =>
@@ -44,20 +58,20 @@ export const fetchTokenTimeseries = (params?: { model_name?: string }) =>
   api.get<TimeSeriesResponse>('/metrics/tokens', { params }).then(r => r.data);
 
 export const fetchDriftScores = (params?: { model_name?: string; limit?: number }) =>
-  api.get<DriftScore[]>('/metrics/drift', { params }).then(r => r.data);
+  api.get('/metrics/drift', { params }).then(r => records<DriftScore>(r.data, 'Drift scores'));
 
 export const fetchHallucinationScores = (params?: { limit?: number }) =>
-  api.get<HallucinationScore[]>('/metrics/hallucinations', { params }).then(r => r.data);
+  api.get('/metrics/hallucinations', { params }).then(r => records<HallucinationScore>(r.data, 'Hallucination scores'));
 
 // Events
 export const fetchEvents = (params?: { model_name?: string; status?: string; limit?: number; offset?: number }) =>
-  api.get<TelemetryEvent[]>('/events', { params }).then(r => r.data);
+  api.get('/authoritative/events', { params }).then(r => records<TelemetryEvent>(r.data, 'Events'));
 
 export const fetchEventDetail = (eventId: string) =>
-  api.get<TelemetryEventDetail>(`/events/${eventId}`).then(r => r.data);
+  api.get<TelemetryEventDetail>(`/authoritative/events/${encodeURIComponent(eventId)}`).then(r => r.data);
 
 // Alerts
-export const fetchAlertRules = () => api.get<AlertRule[]>('/alerts/rules').then(r => r.data);
+export const fetchAlertRules = () => api.get('/alerts/rules').then(r => records<AlertRule>(r.data, 'Alert rules'));
 export const createAlertRule = (data: {
   name: string;
   metric_type: string;
@@ -71,7 +85,7 @@ export const updateAlertRule = (ruleId: string, data: Partial<AlertRule>) =>
 export const deleteAlertRule = (ruleId: string) =>
   api.delete(`/alerts/rules/${ruleId}`);
 export const fetchAlertHistory = (params?: { status?: string; limit?: number }) =>
-  api.get<AlertFired[]>('/alerts/history', { params }).then(r => r.data);
+  api.get('/alerts/history', { params }).then(r => records<AlertFired>(r.data, 'Alert history'));
 
 // AI Insights
 export interface AIInsightResponse {

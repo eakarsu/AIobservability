@@ -26,7 +26,7 @@ export default function ModelPerformance() {
 
   const { data: errors } = useQuery({
     queryKey: ['events-errors'],
-    queryFn: () => fetchEvents({ status: 'error', limit: 10 }),
+    queryFn: () => fetchEvents({ status: 'error', limit: 20 }),
   });
 
   return (

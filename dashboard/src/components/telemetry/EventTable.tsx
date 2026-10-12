@@ -48,7 +48,7 @@ export default function EventTable({ events, onSelect }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {event.latency_ms ? `${event.latency_ms.toFixed(0)} ms` : '-'}
+                  {event.latency_ms != null ? `${event.latency_ms.toFixed(0)} ms` : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {event.input_tokens != null && event.output_tokens != null

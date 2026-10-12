@@ -3,7 +3,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,17 +12,64 @@ from app.core.security import Identity, get_identity
 from app.domain.observability import (PolicyError, authorize, incident_key, payload_hash,
     transition_incident, validate_envelope, validate_eval_run)
 from app.providers import dispatch
+from app.native_advisory_execution import run_native, connected
 
 router = APIRouter(prefix="/authoritative", tags=["Authoritative observability"])
+
+@router.get("/projects")
+async def current_projects(identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+    permitted(identity, "read", identity.project_id)
+    rows = await db.execute(text("SELECT id,name,description,created_at,is_active FROM projects WHERE id=:project AND tenant_id=:tenant AND is_active=TRUE"), {"project": identity.project_id, "tenant": identity.tenant_id})
+    return [dict(row) for row in rows.mappings()]
+
+def dashboard_event(row: dict) -> dict:
+    payload = row["payload"] if isinstance(row["payload"], dict) else {}
+    def number(value):
+        try:
+            parsed = float(value)
+            return parsed if parsed == parsed and abs(parsed) != float("inf") else None
+        except (TypeError, ValueError):
+            return None
+    return {"id": row["event_id"], "project_id": str(row["project_id"]), "timestamp": row["occurred_at"],
+            "trace_id": row["trace_id"], "span_id": row["span_id"], "parent_span_id": row["parent_span_id"],
+            "model_name": row["model_version"] or payload.get("model_name") or "Unspecified model",
+            "model_provider": payload.get("model_provider"), "status": payload.get("status") or "success",
+            "latency_ms": number(payload.get("latency_ms")), "input_tokens": number(payload.get("input_tokens")),
+            "output_tokens": number(payload.get("output_tokens")), "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else None,
+            "tags": payload.get("tags") if isinstance(payload.get("tags"), list) else None, "input_text": payload.get("input_text"),
+            "output_text": payload.get("output_text"), "error_message": payload.get("error_message"),
+            "hallucination_score": payload.get("hallucination_score")}
+
+@router.get("/events")
+async def dashboard_events(model_name: str | None = None, status: str | None = None,
+                           limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                           identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+    permitted(identity, "read", identity.project_id)
+    rows = await db.execute(text("""SELECT event_id,project_id,occurred_at,trace_id,span_id,parent_span_id,model_version,payload
+        FROM observability_events WHERE tenant_id=:tenant AND project_id=:project AND expires_at>NOW()
+        AND (:model IS NULL OR model_version=:model OR payload->>'model_name'=:model)
+        AND (:status IS NULL OR COALESCE(payload->>'status','success')=:status)
+        ORDER BY occurred_at DESC LIMIT :limit OFFSET :offset"""),
+        {"tenant": identity.tenant_id, "project": identity.project_id, "model": model_name, "status": status, "limit": limit, "offset": offset})
+    return {"data": [dashboard_event(dict(row)) for row in rows.mappings()], "pagination": {"limit": limit, "offset": offset}}
+
+@router.get("/events/{event_id}")
+async def dashboard_event_detail(event_id: str, identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+    permitted(identity, "read", identity.project_id)
+    row = (await db.execute(text("""SELECT event_id,project_id,occurred_at,trace_id,span_id,parent_span_id,model_version,payload
+        FROM observability_events WHERE tenant_id=:tenant AND project_id=:project AND event_id=:event AND expires_at>NOW()"""),
+        {"tenant": identity.tenant_id, "project": identity.project_id, "event": event_id})).mappings().first()
+    if not row: raise HTTPException(404, "event_not_found")
+    return dashboard_event(dict(row))
 
 def permitted(identity: Identity, action: str, project_id: str | None = None) -> None:
     try: authorize(identity.as_policy(), identity.tenant_id, action, project_id)
     except PolicyError as exc: raise HTTPException(403, str(exc)) from exc
 
 @router.post("/ai/explain")
-async def explain_observability(body: dict = Body(...), identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+async def explain_observability(transport: Request, body: dict = Body(...), identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
     question = str(body.get("question") or "").strip()
-    if not question: raise HTTPException(422, "question_required")
+    if not question or len(question)>5000: raise HTTPException(422, "question_must_contain_1_to_5000_characters")
     permitted(identity, "read", identity.project_id)
     api_key = str(os.getenv("OPENROUTER_API_KEY") or "").strip()
     model = str(os.getenv("OPENROUTER_MODEL") or "").strip()
@@ -32,17 +79,33 @@ async def explain_observability(body: dict = Body(...), identity: Identity = Dep
     if base_url != "https://openrouter.ai/api/v1": raise HTTPException(503, "OPENROUTER_BASE_URL_invalid")
     event_count = (await db.execute(text("SELECT COUNT(*) FROM observability_events WHERE tenant_id=:tenant AND project_id=:project AND expires_at>NOW()"), {"tenant": identity.tenant_id, "project": identity.project_id})).scalar_one()
     prompt = f"Answer this observability question using only the supplied facts. Question: {question}\nFacts: active retained event count={event_count}. If more evidence is needed, say exactly which telemetry should be collected."
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "X-Title": "AI Observability Platform"}, json={"model": model, "messages": [{"role": "system", "content": "You are a grounded LLM observability analyst. Never invent metrics."}, {"role": "user", "content": prompt}], "max_tokens": 1200})
+    async def provider_call():
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            return await client.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "X-Title": "AI Observability Platform"}, json={"model": model, "messages": [{"role": "system", "content": "You are a grounded LLM observability analyst. Never invent metrics."}, {"role": "user", "content": prompt}], "max_tokens": 1200})
+    try:
+        response=await run_native(transport, identity.tenant_id+":"+str(identity.key_id), provider_call)
+    except httpx.HTTPError as exc: raise HTTPException(502, "openrouter_unavailable") from exc
     try: data = response.json()
     except ValueError as exc: raise HTTPException(502, "openrouter_invalid_json") from exc
     if not response.is_success or data.get("error"): raise HTTPException(502, "openrouter_request_failed")
     content = data.get("choices", [{}])[0].get("message", {}).get("content")
     if not isinstance(content, str) or not content.strip(): raise HTTPException(502, "openrouter_empty_response")
+    await connected(transport)
     result_id = str(uuid.uuid4())
     await db.execute(text("INSERT INTO observability_ai_results(id,tenant_id,project_id,user_id,endpoint,input_data,result,model) VALUES(:id,:tenant,:project,:user,'/api/v1/authoritative/ai/explain',CAST(:input AS jsonb),CAST(:result AS jsonb),:model)"), {"id": result_id, "tenant": identity.tenant_id, "project": identity.project_id, "user": identity.key_id, "input": json.dumps({"question": question, "event_count": event_count}), "result": json.dumps({"insight": content}), "model": model})
-    await db.commit()
+    try:
+        await connected(transport)
+        await db.commit()
+    except BaseException:
+        await db.rollback()
+        raise
     return {"result_id": result_id, "insight": content, "model": data.get("model") or model}
+
+@router.get("/ai/explain")
+async def explain_history(identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
+    permitted(identity,"read",identity.project_id)
+    result=await db.execute(text("SELECT id,input_data,result,model,created_at FROM observability_ai_results WHERE tenant_id=:tenant AND project_id=:project AND user_id=:owner AND endpoint='/api/v1/authoritative/ai/explain' ORDER BY created_at DESC LIMIT 50"), {"tenant":identity.tenant_id,"project":identity.project_id,"owner":identity.key_id})
+    return {"reports":[{"id":str(row["id"]),"prompt":row["input_data"].get("question",""),"content":row["result"].get("insight",""),"model":row["model"],"createdAt":row["created_at"].isoformat()} for row in result.mappings()]}
 
 @router.post("/events", status_code=202)
 async def ingest_event(body: dict = Body(...), identity: Identity = Depends(get_identity), db: AsyncSession = Depends(get_db)):
